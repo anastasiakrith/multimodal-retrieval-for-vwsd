@@ -1,4 +1,6 @@
-# Language Models and Multimodal Retrieval for Visual Word Sense Disambiguation (VWSD)
+# Large Language Models and Multimodal Retrieval for Visual Word Sense Disambiguation (VWSD)
+
+This is the source code of the EMNLP 2023 paper ```Large Language Models and Multimodal Retrieval for Visual Word Sense Disambiguation``` [[paper]](https://aclanthology.org/2023.emnlp-main.807/).
 
 ## Install
 
