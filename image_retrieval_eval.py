@@ -12,12 +12,12 @@ def run_image_retrieval(vl_transformer, wiki, metric, dataset_path=None):
     test_dataset = dataset.test_dataloader()
     
     image_retrieval = ImageRetrievalModule(wiki=wiki, vl_transformer=vl_transformer, metric=metric)
+    score = ScoreModule(approach='image_retrieval')
 
-    score = ScoreModule(approach='image_retrieval')           
     for i in tqdm(range(len(test_dataset))):
-        retrieval = image_retrieval.run(given_phrase=test_dataset[i]['given_phrase'], target_word==test_dataset[i]['word'], images=test_dataset[i]['images'])
+        retrieval = image_retrieval.run(given_phrase=test_dataset[i]['given_phrase'], target_word=test_dataset[i]['word'], images=test_dataset[i]['images'])
         score.add(golden_image_index=test_dataset[i]['gold_image_index'], predictions=retrieval['ordered_pred_images'])
-
+    
     print(f'Accuracy Score: {score.accuracy_score()}')
     print(f'MRR Score: {score.mrr_score()}')
 

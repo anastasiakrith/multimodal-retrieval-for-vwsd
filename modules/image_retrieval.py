@@ -16,6 +16,7 @@ class WikipediaModule:
 
         session = requests.Session()
         url = "https://en.wikipedia.org/w/api.php"
+        # Search by context
         params = {
             "action": "query",
             "format": "json",
@@ -28,8 +29,7 @@ class WikipediaModule:
         for x in json['query']['search']:
             titles.append(x['title'])
         
-        if len(titles) > 0:
-            return titles
+        # Search by target_word
         params = {
             "action": "query",
             "format": "json",
@@ -57,8 +57,6 @@ class WikipediaModule:
                     data = value['original']['source']
                     return data
         except Exception as exc:
-            print(exc)
-            print("Partial URL: " + '_'.join(title.split()))
             data = None
         return data
 
@@ -77,7 +75,7 @@ class WikipediaModule:
             if len(images_list) >= self.max_images:
                 break
 
-        return images_list[:self.images_list]
+        return images_list[:self.max_images]
 
 
 
@@ -107,13 +105,13 @@ class WikidataModule:
         }
     
         response = fetch_wikidata_api(params)
-        if not response.ok:
+        if not response.ok or len(response.json()["search"]) == 0:
             return None
         data = response.json()
         return data["search"][0]["id"]
 
     def search_image_by_entity(self, entity):
-
+        
         endpoint = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
         query = """
                 SELECT ?image 
@@ -142,7 +140,7 @@ class WikidataModule:
             
         images_list = []
         for entity in wikidata_entities:
-            image_urls = self.search_image_by_entity(wikidata_entity)
+            image_urls = self.search_image_by_entity(entity)
             for image_url in image_urls:
                 response = requests.get(image_url)
                 if response.ok:
@@ -151,7 +149,7 @@ class WikidataModule:
             if len(images_list) >= self.max_images:
                 break
         
-        return images_list[:self.images_list]
+        return images_list[:self.max_images]
             
 
 AVAILABLE_VL_TRANSFORMERS_FOR_IMG_RETRIEVAL = {
@@ -179,7 +177,7 @@ class ImageRetrievalModule:
         if vl_transformer not in AVAILABLE_VL_TRANSFORMERS_FOR_IMG_RETRIEVAL:
             raise ValueError(f"Invalid VL transformer: {vl_transformer}. Should be one of {AVAILABLE_VL_TRANSFORMERS_FOR_IMG_RETRIEVAL.keys()}")
 
-        self.vl_transformer = AVAILABLE_VL_TRANSFORMERS[vl_transformer]()
+        self.vl_transformer = AVAILABLE_VL_TRANSFORMERS_FOR_IMG_RETRIEVAL[vl_transformer]()
 
         # Wiki Source for Image Retrieval #
         if wiki not in AVAILABLE_WIKI:
@@ -203,7 +201,6 @@ class ImageRetrievalModule:
 
         # Retrieve Images from Wikipedia/Wikidata #
         retrieved_images = self.wiki.retrieve(given_phrase, target_word)
-
         # Extract features #
         retrieved_images_features = []
         for image in retrieved_images:
@@ -218,7 +215,6 @@ class ImageRetrievalModule:
                 given_images_features.append(self.vl_transformer.get_image_features(image))
             except:
                 given_images_features.append([])
-
 
         if self.similarity_metric is not None:
             # Calculate similarity #

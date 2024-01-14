@@ -1,6 +1,6 @@
 import re
 
-from modules.llms import GPT_3_5, 
+from modules.llms import GPT_3_5
 from modules.captioners import BLIP, GIT
 from modules.prompts import no_CoT_prompt, think_prompt, CoT_prompt
 

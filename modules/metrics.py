@@ -13,7 +13,7 @@ def euclidean_distance(vector_a, vector_b):
     assert len(vector_a.shape) == 1
     assert len(vector_b.shape) == 1
     assert vector_a.shape[0] == vector_b.shape[0]
-    return np.sqrt(sum(pow(a-b,2) for a, b in zip(vector_a, vector_b)))
+    return np.linalg.norm(vector_a - vector_b)
 
 
 def manhattan_distance(vector_a, vector_b):
@@ -28,7 +28,7 @@ def manhattan_distance(vector_a, vector_b):
     assert len(vector_a.shape) == 1
     assert len(vector_b.shape) == 1
     assert vector_a.shape[0] == vector_b.shape[0]
-    return sum(abs(a-b) for a,b in zip(vector_a, vector_b))
+    return np.sum(np.abs(vector_a - vector_b))
 
 def cosine_similarity(vector_a, vector_b):
     """

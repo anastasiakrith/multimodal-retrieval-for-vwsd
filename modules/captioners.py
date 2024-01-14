@@ -1,4 +1,5 @@
 import torch 
+import numpy as np
 from transformers import AutoProcessor, BlipForConditionalGeneration, AutoModelForCausalLM, VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
 
 
@@ -20,7 +21,6 @@ def clean_captions(captions):
             if not flag:
                 captions_set.add(cap)
     return list(captions_set)
-
 
 class BLIP:
     """
@@ -56,8 +56,6 @@ class BLIP:
             return self.processor.decode(model_output[0], skip_special_tokens=True).strip()
         elif self.strategy == "beam":
             return clean_captions([self.processor.decode(output, skip_special_tokens=True).strip() for output in model_output])
-
-        
         
 class GIT:
     """

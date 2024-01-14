@@ -3,7 +3,8 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 
-from modules.vl_transformers import CLIP, ALIGN
+from modules.vl_transformers import CLIP, ALIGN, BLIP_CAPTIONING
+from modules.sbert_embeddings import AVAILABLE_SBERT_FEATURE_EXTRACTORS
 from modules.captioners import BLIP, GIT
 from modules.metrics import cosine_similarity, euclidean_distance, manhattan_distance
 from modules.llms import GPT_3
@@ -11,9 +12,12 @@ from modules.llms import GPT_3
 
 AVAILABLE_FEATURE_EXTRACTORS = {
     'clip': lambda: CLIP(large=False, text_features=True),
-    'clip': lambda: CLIP(large=True, text_features=True)
+    'clip-large': lambda: CLIP(large=True, text_features=True),
     'align': lambda: ALIGN(),
+    'blip': lambda: BLIP_CAPTIONING(),
 }
+AVAILABLE_FEATURE_EXTRACTORS.update(AVAILABLE_SBERT_FEATURE_EXTRACTORS)
+
 
 AVAILABLE_METRICS = {
     'cosine': cosine_similarity,
@@ -45,8 +49,8 @@ class TextRetrievalModule:
     def __init__(self, captioner, strategy, feature_extractor, metric, llm=None, prompt_template=None):
 
         # Feature Extractors #
-        if vl_transformer not in AVAILABLE_FEATURE_EXTRACTORS:
-            raise ValueError(f"Invalid VL transformer: {feature_extractor}. Should be one of {AVAILABLE_FEATURE_EXTRACTORS.keys()}")
+        if feature_extractor not in AVAILABLE_FEATURE_EXTRACTORS:
+            raise ValueError(f"Invalid Feature Extractor: {feature_extractor}. Should be one of {AVAILABLE_FEATURE_EXTRACTORS.keys()}")
 
         self.feature_extractor = AVAILABLE_FEATURE_EXTRACTORS[feature_extractor]()
 
@@ -54,7 +58,7 @@ class TextRetrievalModule:
         if captioner not in AVAILABLE_CAPTIONERS:
             raise ValueError(f"Invalid Captioner: {captioner}. Should be one of {AVAILABLE_CAPTIONERS.keys()}")
         if strategy not in ['greedy', 'beam']:
-            raise ValueError(f"Invalid captioner strategy: {strategy}. Should be one of ['greedy', 'beam']")
+            raise ValueError(f"Invalid Captioner Strategy: {strategy}. Should be one of ['greedy', 'beam']")
 
         self.captioner = AVAILABLE_CAPTIONERS[captioner](strategy)
         self.strategy = strategy
@@ -63,11 +67,11 @@ class TextRetrievalModule:
         if llm is not None and llm not in AVAILABLE_LLMS:
             raise ValueError(f"Invalid LLM: {llm}. Should be one of {AVAILABLE_LLMS.keys()}")
 
-        self.llm = AVAILABLE_LLMS[llm] if llm is not None else llm
+        self.llm = AVAILABLE_LLMS[llm]() if llm is not None else llm
 
         # Prompt or None #
         if self.llm is not None and prompt_template not in AVAILABLE_PROMPT_TEMPLATES:
-            raise ValueError(f"Invalid prompt template: {prompt_template}. Should be one of {AVAILABLE_PROMPT_TEMPLATES.keys()}")
+            raise ValueError(f"Invalid Prompt Template: {prompt_template}. Should be one of {AVAILABLE_PROMPT_TEMPLATES.keys()}")
 
         self.prompt = AVAILABLE_PROMPT_TEMPLATES[prompt_template] if self.llm is not None else None
 
@@ -83,7 +87,7 @@ class TextRetrievalModule:
             self.distance_metric = AVAILABLE_METRICS[metric]
 
 
-    def run(self, given_phrase, target_word, images):
+    def run(self, given_phrase, images):
 
         ################################
         # Retrieve Captions for Images #
@@ -120,7 +124,7 @@ class TextRetrievalModule:
         
         # Phrase #
         text_features = self.feature_extractor.get_text_features(text) 
-        
+
         ####################
         # Calculate Metric #
         ####################
@@ -128,7 +132,7 @@ class TextRetrievalModule:
             # Calculate similarity #
             similarities = []
             if self.strategy == "greedy":
-                similarities = np.array([self.similarity_metric(cap_feat, text_features) if len(cap_feat) > 0 else 0 for img_feat in captions_features])
+                similarities = np.array([self.similarity_metric(cap_feat, text_features) if len(cap_feat) > 0 else 0 for cap_feat in captions_features])
             else:
                 for cap_group in captions_features:
                     if len(cap_group) == 0:
@@ -145,7 +149,7 @@ class TextRetrievalModule:
             # Calculate distance #
             distances = []
             if self.strategy == "greedy":
-                distances = np.array([self.distance_metric(cap_feat, text_features) if len(cap_feat) > 0 else 0 for img_feat in captions_features])
+                distances = np.array([self.distance_metric(cap_feat, text_features) if len(cap_feat) > 0 else 0 for cap_feat in captions_features])
             else:
                 for cap_group in captions_features:
                     if len(cap_group) == 0:
